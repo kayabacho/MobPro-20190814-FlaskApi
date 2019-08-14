@@ -2,20 +2,25 @@ import argparse
 import tkinter as tk
 from tkthread import Thread
 
+yoko = 580
+tate = 300
+yohaku = 15
 
 class Othello(tk.Tk):
+
     def __init__(self, cpu, sec):
         super(Othello, self).__init__()
         self.cpu = cpu
         self.title("オセロ")
-        self.geometry("{}x{}+{}+{}".format(350, 450, 450, 100))
-        self.color = ["", "white", "black"]
+        # self.geometry("{}x{}+{}+{}".format(350, 450, 450, 100))
+        self.geometry("{}x{}+{}+{}".format(650, 550, 550, 200))
+        self.color = ["", "gold2", "red"]
         # {tag: position}
         self.tag2pos = {}
         # 座標からtagの変換
         self.z2tag = {}
         # 符号
-        self.numstr = '12345679'
+        self.numstr = '12345678'
         self.alpstr = "abcdefgh"
         # Set up some variables
         self.set_variables()
@@ -30,7 +35,8 @@ class Othello(tk.Tk):
             self.thread()
 
     def set_variables(self):
-        self.sentinel = [2] * 10 + [[0, 2][i in [0, 9]] for i in range(10)] * 8 + [2] * 10
+        self.sentinel = [2] * 10 + [[0, 2][i in [0, 9]]
+                                    for i in range(10)] * 8 + [2] * 10
         self.board2info = [0] * 64
         self.playerTurn = 1
         self.gorilla = 0
@@ -38,50 +44,66 @@ class Othello(tk.Tk):
 
     def set_board(self):
         # オセロ盤
-        self.board = tk.Canvas(self, bg="lime green", width=350, height=350)
+        global tate, yoko, yohaku
+        
+        self.board = tk.Canvas(self, bg="#395E98", width=yoko, height=tate)
         self.board.place(x=0, y=0)
+
+        yokozoubun = int((yoko - yohaku * 2) / 8.0)
+        yokoend = yoko - yohaku
+        tatezoubun = int((tate - yohaku * 2) / 8.0)
+        tateend = tate - yohaku
+
         # オセロ盤を作成
-        for i, y in zip(self.numstr, range(15, 336, 40)):
-            for j, x in zip(self.alpstr, range(15, 336, 40)):
-                pos = x, y, x+40, y+40
+        for i, y in zip(self.numstr, range(yohaku, tateend, tatezoubun)):
+            for j, x in zip(self.alpstr, range(yohaku, yokoend, yokozoubun)):
+                pos = x, y, x+yokozoubun, y+tatezoubun
                 tag = i + j
                 self.tag2pos[tag] = pos
-                self.board.create_rectangle(*pos, fill="lime green", tags=tag)
+                self.board.create_rectangle(*pos, fill="pink", tags=tag)
                 self.z2tag[self.z_coordinate(tag)] = tag
                 self.board.tag_bind(tag, "<ButtonPress-1>", self.pressed)
         # 初期設定
         for z, turn in [(44, 1), (45, -1), (54, -1), (55, 1)]:
             tag = self.z2tag[z]
             self.sentinel[z] = turn
-            self.board.create_oval(*self.tag2pos[tag], fill=self.color[turn], tags=tag)
+            self.board.create_oval(
+                *self.tag2pos[tag], fill=self.color[turn], tags=tag)
         self.sent2board()
-        #self.get_board_info()
+        # self.get_board_info()
         self.get_candidates()
         self.switch_board()
 
     def set_button(self):
-        self.reset = tk.Button(self, text="reset", relief="groove", command=self.clear)
-        self.reset.place(x=170, y=380)
-        self.quit_program = tk.Button(self, text="quit", relief="groove", command=self.close)
-        self.quit_program.place(x=280, y=380)
+        global tate, yoko, yohaku
+        yokoend = yoko - yohaku
+        tateend = tate - yohaku
+
+        self.reset = tk.Button(
+            self, text="reset", relief="groove", command=self.clear)
+        self.reset.place(x=yokoend /2, y=tateend + 40)
+        self.quit_program = tk.Button(
+            self, text="quit", relief="groove", command=self.close)
+        self.quit_program.place(x=yokoend /3, y=tateend + 40)
 
     def get_sentinel_info(self):
         # self.sentinelを表示
         print("{:-^31s}".format("self.sentinel"))
-        print(*[str(" {:2d} " * 8).format(*self.sentinel[i:i+8]) \
-            for i in range(11, 89, 10)], sep="\n")
+        print(*[str(" {:2d} " * 8).format(*self.sentinel[i:i+8])
+                for i in range(11, 89, 10)], sep="\n")
         print('-'*31)
 
     def get_board_info(self):
         # self.board2infoを表示
         print("{:-^31s}".format("self.board2info"))
-        print(*[str(" {:2d} " * 8).format(*self.board2info[i:i+8]) \
-            for i in range(0, 64, 8)], sep="\n")
+        print(*[str(" {:2d} " * 8).format(*self.board2info[i:i+8])
+                for i in range(0, 64, 8)], sep="\n")
         print('-'*31)
 
     def sent2board(self):
         # self.sentinelをself.board2infoに変換
-        self.board2info = [self.sentinel[j] for i in range(11, 89, 10) for j in range(i, i+8)]
+        self.board2info = [self.sentinel[j]
+                           for i in range(11, 89, 10) for j in range(i, i+8)]
 
     def z_coordinate(self, tag):
         x = self.alpstr.index(tag[1])+1
@@ -135,10 +157,12 @@ class Othello(tk.Tk):
         # 反転処理
         for z in self.candidates[tag]:
             ctag = self.z2tag[z]
-            self.board.create_oval(*self.tag2pos[ctag], fill=self.color[self.playerTurn])
+            self.board.create_oval(
+                *self.tag2pos[ctag], fill=self.color[self.playerTurn])
             self.sentinel[z] = self.playerTurn
         # 新しく石を置く
-        self.board.create_oval(*self.tag2pos[tag], fill=self.color[self.playerTurn])
+        self.board.create_oval(
+            *self.tag2pos[tag], fill=self.color[self.playerTurn])
 
         ### 2. 盤情報の更新。###
         self.sentinel[self.z_coordinate(tag)] = self.playerTurn
@@ -179,7 +203,8 @@ class Othello(tk.Tk):
     def switch_board(self, color=1):
         # 候補手のところの色を変える
         for tag in self.candidates.keys():
-            self.board.itemconfig(tag, fill=["lime green", "lawn green"][color])
+            self.board.itemconfig(
+                tag, fill=["purple", "white"][color])
 
     def print_turn(self):
         print("{}のターンです。".format(['', '白', '黒'][self.playerTurn]))
@@ -231,7 +256,7 @@ if __name__ == "__main__":
         '-s',
         '--sec',
         type=float,
-        default=0.1,
+        default=0.5,
         help="AIが思考状態に入るまでの時間を指定"
     )
     args = parser.parse_args()
